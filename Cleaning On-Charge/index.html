@@ -1,178 +1,178 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #controls { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-    th { background-color: #d9ead3; }
-    .status-billed { background-color: #d9e1f5; }
-    .status-unassigned { background-color: #f4cccc; }
-    .loading { color: gray; }
-  </style>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #controls { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+    th { background-color: #d9ead3; }
+    .status-billed { background-color: #d9e1f5; }
+    .status-unassigned { background-color: #f4cccc; }
+    .loading { color: gray; }
+  </style>
 </head>
 <body>
 
-  <h1>Xero Billable Expenses Assign Manager</h1>
+  <h1>Xero Billable Expenses Assign Manager</h1>
 
-  <div id="controls">
-    <h2>Pilih Rentang Tanggal</h2>
-    <label for="startDate">Mulai:</label>
-    <input type="date" id="startDate" required>
-    <label for="endDate">Sampai:</label>
-    <input type="date" id="endDate" required>
-    <button onclick="fetchData()">🔄 Tarik Data</button>
-  </div>
+  <div id="controls">
+    <h2>Pilih Rentang Tanggal</h2>
+    <label for="startDate">Mulai:</label>
+    <input type="date" id="startDate" required>
+    <label for="endDate">Sampai:</label>
+    <input type="date" id="endDate" required>
+    <button onclick="fetchData()">🔄 Tarik Data</button>
+  </div>
 
-  <div id="statusMessage"></div>
-  <table id="dataTable"></table>
+  <div id="statusMessage"></div>
+  <table id="dataTable"></table>
 
-  <script>
-    const statusMessage = document.getElementById('statusMessage');
-    const dataTable = document.getElementById('dataTable');
-    let customerList = [];
-    let currentData = [];
+  <script>
+    const statusMessage = document.getElementById('statusMessage');
+    const dataTable = document.getElementById('dataTable');
+    let customerList = [];
+    let currentData = [];
 
-    // --- 1. SETUP UI DAN LOAD KONTAK ---
+    // --- 1. SETUP UI DAN LOAD KONTAK ---
 
-    // Set tanggal default (misal, 3 bulan terakhir)
-    const today = new Date();
-    const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-    document.getElementById('endDate').valueAsDate = today;
-    document.getElementById('startDate').valueAsDate = threeMonthsAgo;
+    // Set tanggal default (misal, 3 bulan terakhir)
+    const today = new Date();
+    const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+    document.getElementById('endDate').valueAsDate = today;
+    document.getElementById('startDate').valueAsDate = threeMonthsAgo;
 
-    // Load daftar kontak dari Apps Script saat halaman dimuat
-    google.script.run
-      .withSuccessHandler(populateCustomerDropdown)
-      .getCustomerListForDropdown();
-      
-    function populateCustomerDropdown(list) {
-      customerList = list;
-      statusMessage.innerHTML = `<span style="color: green;">✅ ${list.length} Kontak siap.</span>`;
-    }
+    // Load daftar kontak dari Apps Script saat halaman dimuat
+    google.script.run
+      .withSuccessHandler(populateCustomerDropdown)
+      .getCustomerListForDropdown();
+      
+    function populateCustomerDropdown(list) {
+      customerList = list;
+      statusMessage.innerHTML = `<span style="color: green;">✅ ${list.length} Kontak siap.</span>`;
+    }
 
-    // --- 2. LOGIKA PENARIKAN DATA ---
+    // --- 2. LOGIKA PENARIKAN DATA ---
 
-    function fetchData() {
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
-      if (!startDate || !endDate) {
-        statusMessage.textContent = "Mohon isi kedua tanggal.";
-        return;
-      }
-      
-      statusMessage.className = 'loading';
-      statusMessage.textContent = "⌛ Menarik data Xero, mohon tunggu...";
-      
-      google.script.run
-        .withSuccessHandler(displayData)
-        .withFailureHandler(handleError)
-        .fetchXeroDataByDateRange(startDate, endDate);
-    }
+    function fetchData() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      if (!startDate || !endDate) {
+        statusMessage.textContent = "Mohon isi kedua tanggal.";
+        return;
+      }
+      
+      statusMessage.className = 'loading';
+      statusMessage.textContent = "⌛ Menarik data Xero, mohon tunggu...";
+      
+      google.script.run
+        .withSuccessHandler(displayData)
+        .withFailureHandler(handleError)
+        .fetchXeroDataByDateRange(startDate, endDate);
+    }
 
-    function displayData(response) {
-      if (response.error) {
-        handleError(response.error);
-        return;
-      }
-      
-      currentData = response.data;
-      statusMessage.className = '';
-      statusMessage.innerHTML = `<span style="color: blue;">✅ ${currentData.length} baris data berhasil ditarik.</span>`;
+    function displayData(response) {
+      if (response.error) {
+        handleError(response.error);
+        return;
+      }
+      
+      currentData = response.data;
+      statusMessage.className = '';
+      statusMessage.innerHTML = `<span style="color: blue;">✅ ${currentData.length} baris data berhasil ditarik.</span>`;
 
-      let html = '<thead><tr>';
-      response.headers.forEach(h => html += `<th>${h}</th>`);
-      // Tambahkan kolom untuk aksi
-      html += '<th>✍️ ASSIGN CUSTOMER</th><th>Aksi</th></tr></thead><tbody>';
+      let html = '<thead><tr>';
+      response.headers.forEach(h => html += `<th>${h}</th>`);
+      // Tambahkan kolom untuk aksi
+      html += '<th>✍️ ASSIGN CUSTOMER</th><th>Aksi</th></tr></thead><tbody>';
 
-      currentData.forEach((rowData, index) => {
-        const tenantID = rowData[1];
-        const currentCustomer = rowData[9];
-        const status = rowData[10];
-        
-        let rowClass = '';
-        if (status.includes('Di-invoice')) rowClass = 'status-billed';
-        if (status.includes('Belum Di-Assign')) rowClass = 'status-unassigned';
-        
-        html += `<tr id="row-${index}" class="${rowClass}">`;
-        
-        // Data kolam (Kolom A sampai M)
-        rowData.forEach(cell => html += `<td>${cell}</td>`);
-        
-        // Kolom Dropdown Customer (Index 14)
-        html += `<td>${createDropdown(tenantID, index, currentCustomer)}</td>`;
+      currentData.forEach((rowData, index) => {
+        const tenantID = rowData[1];
+        const currentCustomer = rowData[9];
+        const status = rowData[10];
+        
+        let rowClass = '';
+        if (status.includes('Di-invoice')) rowClass = 'status-billed';
+        if (status.includes('Belum Di-Assign')) rowClass = 'status-unassigned';
+        
+        html += `<tr id="row-${index}" class="${rowClass}">`;
+        
+        // Data kolam (Kolom A sampai M di data rowData)
+        rowData.forEach(cell => html += `<td>${cell}</td>`);
+        
+        // Kolom Dropdown Customer (Index 14)
+        html += `<td>${createDropdown(tenantID, index, currentCustomer)}</td>`;
 
-        // Kolom Aksi (Index 15)
-        html += `<td><button onclick="assignCustomer(${index})" ${status.includes('Di-invoice') ? 'disabled' : ''}>Kirim</button><div id="result-${index}"></div></td>`;
-        
-        html += '</tr>';
-      });
+        // Kolom Aksi (Index 15)
+        html += `<td><button onclick="assignCustomer(${index})" ${status.includes('Di-invoice') ? 'disabled' : ''}>Kirim</button><div id="result-${index}"></div></td>`;
+        
+        html += '</tr>';
+      });
 
-      html += '</tbody>';
-      dataTable.innerHTML = html;
-    }
+      html += '</tbody>';
+      dataTable.innerHTML = html;
+    }
 
-    function createDropdown(tenantID, rowIndex, currentValue) {
-      let options = customerList
-        .filter(c => c[3] === tenantID) // Filter Customer berdasarkan Tenant ID baris data
-        .map(c => {
-          const name = c[0];
-          const selected = name === currentValue ? 'selected' : '';
-          return `<option value="${c[1]}" ${selected}>${name}</option>`;
-        })
-        .join('');
-      
-      // Tambahkan opsi default
-      options = `<option value="">-- Pilih Customer --</option>` + options;
-      
-      return `<select id="select-${rowIndex}">${options}</select>`;
-    }
-    
-    // --- 3. LOGIKA ASSIGN CUSTOMER ---
+    function createDropdown(tenantID, rowIndex, currentValue) {
+      let options = customerList
+        .filter(c => c[3] === tenantID) // Filter Customer berdasarkan Tenant ID baris data (Index 3 di customerList = TenantID)
+        .map(c => {
+          const name = c[0];
+          const selected = name === currentValue ? 'selected' : '';
+          return `<option value="${c[1]}" ${selected}>${name}</option>`; // Index 1 di customerList = ContactID
+        })
+        .join('');
+      
+      // Tambahkan opsi default
+      options = `<option value="">-- Pilih Customer --</option>` + options;
+      
+      return `<select id="select-${rowIndex}">${options}</select>`;
+    }
+    
+    // --- 3. LOGIKA ASSIGN CUSTOMER ---
 
-    function assignCustomer(rowIndex) {
-      const rowData = currentData[rowIndex];
-      const selectElement = document.getElementById(`select-${rowIndex}`);
-      const resultDiv = document.getElementById(`result-${rowIndex}`);
-      const selectedContactID = selectElement.value;
+    function assignCustomer(rowIndex) {
+      const rowData = currentData[rowIndex];
+      const selectElement = document.getElementById(`select-${rowIndex}`);
+      const resultDiv = document.getElementById(`result-${rowIndex}`);
+      const selectedContactID = selectElement.value;
 
-      if (!selectedContactID) {
-        resultDiv.textContent = 'Pilih Customer terlebih dahulu.';
-        return;
-      }
-      
-      resultDiv.innerHTML = '... Mengirim ...';
-      
-      // MENGAMBIL DATA DARI ARRAY BARIS (sesuai urutan outputRows di backend)
-      const dataToAssign = {
-        tenantID: rowData[1], // Index 1 = TenantID (Kolom B)
-        invoiceID: rowData[13], // Index 13 = InvoiceID
-        lineItemID: rowData[14], // Index 14 = LineItemID
-        targetContactID: selectedContactID // ContactID dari Dropdown
-      };
-      
-      google.script.run
-        .withSuccessHandler(response => {
-          if (response.success) {
-            resultDiv.innerHTML = `<span style="color: green;">✅ ${response.message}</span>`;
-            document.getElementById(`row-${rowIndex}`).style.backgroundColor = '#d1e6d3'; // Warna sukses
-          } else {
-            resultDiv.innerHTML = `<span style="color: red;">❌ Gagal: ${response.message}</span>`;
-          }
-        })
-        .withFailureHandler(handleError)
-        .assignCustomerToExpense(dataToAssign);
-    }
-    
-    function handleError(error) {
-      statusMessage.className = '';
-      statusMessage.innerHTML = `<span style="color: red;">❌ ERROR: ${error.message || error.Detail || error}</span>`;
-      console.error(error);
-    }
+      if (!selectedContactID) {
+        resultDiv.textContent = 'Pilih Customer terlebih dahulu.';
+        return;
+      }
+      
+      resultDiv.innerHTML = '... Mengirim ...';
+      
+      // MENGAMBIL DATA DARI ARRAY BARIS (sesuai urutan outputRows di backend)
+      const dataToAssign = {
+        tenantID: rowData[1], // Index 1 = TenantID
+        invoiceID: rowData[13], // Index 13 = InvoiceID
+        lineItemID: rowData[14], // Index 14 = LineItemID
+        targetContactID: selectedContactID // ContactID dari Dropdown
+      };
+      
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response.success) {
+            resultDiv.innerHTML = `<span style="color: green;">✅ ${response.message}</span>`;
+            document.getElementById(`row-${rowIndex}`).style.backgroundColor = '#d1e6d3'; // Warna sukses
+          } else {
+            resultDiv.innerHTML = `<span style="color: red;">❌ Gagal: ${response.message}</span>`;
+          }
+        })
+        .withFailureHandler(handleError)
+        .assignCustomerToExpense(dataToAssign);
+    }
+    
+    function handleError(error) {
+      statusMessage.className = '';
+      statusMessage.innerHTML = `<span style="color: red;">❌ ERROR: ${error.message || error.Detail || error}</span>`;
+      console.error(error);
+    }
 
-  </script>
+  </script>
 
 </body>
 </html>
